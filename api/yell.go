@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 type yell struct {
@@ -50,12 +53,51 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}))
 	}
 
+	// Save the yell off-thread b/c we don't care if it works
+	go saveYell(y)
+
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, getResponse(response{
 		Msg:   y.What,
 		Cloud: y.Cloud,
 	}))
 	return
+}
+
+func saveYell(y yell) {
+	apiKey := os.Getenv("SUPABASE_API_KEY")
+	if len(apiKey) == 0 {
+		return
+	}
+
+	endpoint := os.Getenv("SUPABASE_ENDPOINT")
+	if len(endpoint) == 0 {
+		return
+	}
+
+	body, _ := json.Marshal(y)
+
+	request, err := http.NewRequest(
+		http.MethodPost,
+		endpoint,
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Prefer", "return=representation")
+	request.Header.Set("apikey", apiKey)
+
+	client := &http.Client{}
+	r, err := client.Do(request)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	respBody, _ := ioutil.ReadAll(r.Body)
+	fmt.Println(fmt.Sprintf("supabase resp: %s", string(respBody)))
 }
 
 func getYellFromRequestBody(body io.ReadCloser) (yell, error) {
