@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 )
@@ -65,13 +66,17 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveYell(y yell) {
+	logger := log.Default()
+
 	apiKey := os.Getenv("SUPABASE_API_KEY")
 	if len(apiKey) == 0 {
+		logger.Print("no api key")
 		return
 	}
 
 	endpoint := os.Getenv("SUPABASE_ENDPOINT")
 	if len(endpoint) == 0 {
+		logger.Print("no endpoint")
 		return
 	}
 
@@ -83,6 +88,7 @@ func saveYell(y yell) {
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
+		logger.Print(err)
 		return
 	}
 
@@ -94,15 +100,19 @@ func saveYell(y yell) {
 	r, err := client.Do(request)
 	if err != nil {
 		fmt.Println(err)
+		logger.Print(err)
 		return
 	}
 
 	respBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Println(err)
+		logger.Print(err)
 		return
 	}
-	fmt.Println(fmt.Sprintf("supabase resp: %s", string(respBody)))
+	msg := fmt.Sprintf("supabase resp: %s", string(respBody))
+	logger.Print(msg)
+	fmt.Println(msg)
 }
 
 func getYellFromRequestBody(body io.ReadCloser) (yell, error) {
