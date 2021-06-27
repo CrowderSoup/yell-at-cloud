@@ -94,9 +94,14 @@ func saveYell(y yell) {
 	r, err := client.Do(request)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
-	respBody, _ := ioutil.ReadAll(r.Body)
+	respBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	fmt.Println(fmt.Sprintf("supabase resp: %s", string(respBody)))
 }
 
