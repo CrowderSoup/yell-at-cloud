@@ -66,7 +66,21 @@ export default {
           msg: encodeURIComponent(this.msg),
           cloud: encodeURIComponent(this.cloud),
         }
-        response = await fetch(`/api/yell?msg=${encoded.msg}&cloud=${encoded.cloud}`)
+        let body = {
+          what: this.msg,
+          cloud: this.cloud,
+        }
+
+        response = await fetch(
+          `/api/yell?msg=${encoded.msg}&cloud=${encoded.cloud}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+          }
+        )
         data = await response.json()
 
         if (response.status >= 400) {
@@ -90,9 +104,9 @@ export default {
 </script>
 
 <style>
-input[type="submit"], select {
+button, select {
   display: block;
-  margin: 0 auto;
+  margin: 1rem auto;
 }
 
 .yell {
