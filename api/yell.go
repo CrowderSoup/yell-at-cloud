@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,8 +55,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}))
 	}
 
-	// Save the yell off-thread b/c we don't care if it works
-	go saveYell(y)
+	// Save the yell
+	_, err = saveYell(y)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, getResponse(response{
+			Msg: err.Error(),
+		}))
+	}
 
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, getResponse(response{
@@ -65,19 +72,19 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func saveYell(y yell) {
+func saveYell(y yell) (string, error) {
 	logger := log.Default()
 
 	apiKey := os.Getenv("SUPABASE_API_KEY")
 	if len(apiKey) == 0 {
 		logger.Print("no api key")
-		return
+		return "", errors.New("no api key")
 	}
 
 	endpoint := os.Getenv("SUPABASE_ENDPOINT")
 	if len(endpoint) == 0 {
 		logger.Print("no endpoint")
-		return
+		return "", errors.New("no endpoint")
 	}
 
 	body, _ := json.Marshal(y)
@@ -89,7 +96,7 @@ func saveYell(y yell) {
 	)
 	if err != nil {
 		logger.Print(err)
-		return
+		return "", err
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -99,20 +106,19 @@ func saveYell(y yell) {
 	client := &http.Client{}
 	r, err := client.Do(request)
 	if err != nil {
-		fmt.Println(err)
-		logger.Fatal(err)
-		return
+		logger.Print(err)
+		return "", err
 	}
 
 	respBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println(err)
-		logger.Fatal(err)
-		return
+		logger.Print(err)
+		return "", err
 	}
 	msg := fmt.Sprintf("supabase resp: %s", string(respBody))
 	logger.Print(msg)
-	fmt.Println(msg)
+
+	return string(respBody), nil
 }
 
 func getYellFromRequestBody(body io.ReadCloser) (yell, error) {
