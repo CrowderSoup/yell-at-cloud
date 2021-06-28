@@ -62,6 +62,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, getResponse(response{
 			Msg: err.Error(),
 		}))
+		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
